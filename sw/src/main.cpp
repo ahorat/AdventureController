@@ -2,7 +2,7 @@
 #include <Bounce2.h>
 #include <bluefruit.h>
 
-//#define DEBUG
+// #define DEBUG
 
 #define BUTTON_PRESSED LOW
 #define BUTTON_RELEASED HIGH
@@ -15,12 +15,13 @@
 
 #define PROFILE_SWITCH_BUTTON_1 0
 #define PROFILE_SWITCH_BUTTON_2 3
-#define PROFILE_SWITCH_INTERVAL 5000
+#define PROFILE_SWITCH_INTERVAL 2000
 
-#define MULTIPRESS_INTERVAL 500
+#define MULTIPRESS_INTERVAL 200
+#define MULTIPRESS_WAIT_INTERVAL 1000
 
 #define LED_GREEN_1_PIN PIN_017
-#define LED_RED_PIN  PIN_020
+#define LED_RED_PIN PIN_020
 #define LED_BLUE_PIN PIN_008
 #define LED_GREEN_2_PIN PIN_006
 
@@ -32,19 +33,20 @@ uint32_t nextKeyStrikeTimeMs[NUM_BUTTONS];
 
 const int BUTTON_PINS[NUM_BUTTONS] = {PIN_031, PIN_029, PIN_002, PIN_115};
 
-const uint16_t KEY_CODES_PROFILE_1[NUM_BUTTONS] = {'=', '-', 'r', 'c'};
-const uint16_t KEY_CODES_PROFILE_2[NUM_BUTTONS] = {HID_KEY_ARROW_RIGHT, HID_KEY_ARROW_LEFT,
-                                                   HID_KEY_ARROW_UP, HID_KEY_ARROW_DOWN};
-const uint16_t KEY_CODES_PROFILE_3[NUM_BUTTONS] = {HID_USAGE_CONSUMER_SCAN_NEXT, HID_USAGE_CONSUMER_SCAN_PREVIOUS,
-                                                   HID_USAGE_CONSUMER_VOLUME_INCREMENT, HID_USAGE_CONSUMER_VOLUME_DECREMENT};
+const uint16_t KEY_CODES_PROFILE_1[2*NUM_BUTTONS] = {'=', '-', 'r', 'c', 'a','-','r','c'};
+const uint16_t KEY_CODES_PROFILE_2[2*NUM_BUTTONS] = {HID_KEY_ARROW_RIGHT, HID_KEY_ARROW_LEFT, HID_KEY_ARROW_UP, HID_KEY_ARROW_DOWN,
+  HID_KEY_ARROW_RIGHT, HID_KEY_ARROW_LEFT, HID_KEY_ARROW_UP, HID_KEY_ARROW_DOWN};
+const uint16_t KEY_CODES_PROFILE_3[2*NUM_BUTTONS] = {HID_USAGE_CONSUMER_SCAN_NEXT, HID_USAGE_CONSUMER_SCAN_PREVIOUS,
+  HID_USAGE_CONSUMER_VOLUME_INCREMENT, HID_USAGE_CONSUMER_VOLUME_DECREMENT,HID_USAGE_CONSUMER_SCAN_NEXT, HID_USAGE_CONSUMER_SCAN_PREVIOUS,
+  HID_USAGE_CONSUMER_VOLUME_INCREMENT, HID_USAGE_CONSUMER_VOLUME_DECREMENT};
+
 const uint16_t *KEY_CODES[NUMBER_OF_PROFILES] = {KEY_CODES_PROFILE_1, KEY_CODES_PROFILE_2, KEY_CODES_PROFILE_3};
 
 const int LED_PINS[4] = {
     LED_GREEN_1_PIN,
     LED_GREEN_2_PIN,
     LED_BLUE_PIN,
-    LED_RED_PIN
-};
+    LED_RED_PIN};
 
 uint32_t currentProfile;
 bool profileChanged;
@@ -96,7 +98,7 @@ void setup()
 
   Bluefruit.begin();
   Bluefruit.autoConnLed(false);
-  Bluefruit.setName("AdvCtrl V0.1 P1");
+  Bluefruit.setName("AdvCtrl V0.2");
   Bluefruit.setTxPower(4);
 
   // Configure and Start Device Information Service
@@ -170,7 +172,8 @@ void loop()
       // If value changed, get new state and fire key if button is released.
       if (bounces[i].read() == BUTTON_RELEASED)
       {
-        fireKey(i);
+        if(nextKeyStrikeTimeMs[i]==0 && !profileChanged)
+          fireKey(i);
         nextKeyStrikeTimeMs[i] = 0;
       }
     }
@@ -180,9 +183,9 @@ void loop()
     {
       // If button is pressed for longer time, repeated firing of keys
       currentDuration = bounces[i].currentDuration();
-      if (currentDuration > 1000 && currentDuration > nextKeyStrikeTimeMs[i])
+      if (currentDuration > MULTIPRESS_WAIT_INTERVAL && currentDuration > nextKeyStrikeTimeMs[i])
       {
-        fireKey(i);
+        fireKey(i+NUM_BUTTONS);
         nextKeyStrikeTimeMs[i] = currentDuration + MULTIPRESS_INTERVAL;
       }
     }
@@ -200,7 +203,7 @@ void fireKey(uint32_t button_id)
     blehid.consumerKeyPress(KEY_CODES[currentProfile][button_id]);
     blehid.consumerKeyRelease();
   }
-  else if(currentProfile == ID_OF_ARROW_PROFILE)
+  else if (currentProfile == ID_OF_ARROW_PROFILE)
   {
     uint8_t keycodes[6] = {(uint8_t)(KEY_CODES[currentProfile][button_id]), HID_KEY_NONE, HID_KEY_NONE, HID_KEY_NONE, HID_KEY_NONE, HID_KEY_NONE};
     blehid.keyboardReport(0, keycodes);
@@ -212,3 +215,7 @@ void fireKey(uint32_t button_id)
     blehid.keyRelease();
   }
 }
+
+
+
+
