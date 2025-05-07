@@ -26,14 +26,18 @@
 #define LED_GREEN_2_PIN PIN_006
 
 BLEDis bledis;
-BLEHidAdafruit blehid;
+//BLEHidAdafruit blehid;
+BLEHidGamepad blehid;
+hid_gamepad_report_t gp;
 
 Bounce bounces[NUM_BUTTONS];
 uint32_t nextKeyStrikeTimeMs[NUM_BUTTONS];
 
 const int BUTTON_PINS[NUM_BUTTONS] = {PIN_031, PIN_029, PIN_002, PIN_115};
 
-const uint16_t KEY_CODES_PROFILE_1[2*NUM_BUTTONS] = {'=', '-', 'r', 'c', 'a','-','r','c'};
+const uint16_t KEY_CODES_PROFILE_1[2*NUM_BUTTONS] = {0, 1,2,3,4,1,2,3};
+
+//const uint16_t KEY_CODES_PROFILE_1[2*NUM_BUTTONS] = {'=', '-', 'r', 'c', 'a','-','r','c'};
 const uint16_t KEY_CODES_PROFILE_2[2*NUM_BUTTONS] = {HID_KEY_ARROW_RIGHT, HID_KEY_ARROW_LEFT, HID_KEY_ARROW_UP, HID_KEY_ARROW_DOWN,
   HID_KEY_ARROW_RIGHT, HID_KEY_ARROW_LEFT, HID_KEY_ARROW_UP, HID_KEY_ARROW_DOWN};
 const uint16_t KEY_CODES_PROFILE_3[2*NUM_BUTTONS] = {HID_USAGE_CONSUMER_SCAN_NEXT, HID_USAGE_CONSUMER_SCAN_PREVIOUS,
@@ -112,7 +116,7 @@ void setup()
   // Advertising packet
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addTxPower();
-  Bluefruit.Advertising.addAppearance(BLE_APPEARANCE_HID_KEYBOARD);
+  Bluefruit.Advertising.addAppearance(BLE_APPEARANCE_HID_GAMEPAD);
 
   // Include BLE HID service
   Bluefruit.Advertising.addService(blehid);
@@ -137,8 +141,9 @@ void loop()
   digitalWrite(LED_GREEN_1_PIN, Bluefruit.connected());
   digitalWrite(LED_GREEN_2_PIN, currentProfile == 1 ? 1 : 0);
   digitalWrite(LED_BLUE_PIN, currentProfile == 2 ? 1 : 0);
-
+  gp.buttons=0;
   delay(5);
+  
   for (int i = 0; i < NUM_BUTTONS; i++)
   {
     // Update the Bounces instance
@@ -190,6 +195,7 @@ void loop()
       }
     }
   }
+  blehid.report(&gp);
   // Serial.println(bounces[0].read());
 }
 
@@ -198,7 +204,7 @@ void fireKey(uint32_t button_id)
 #ifdef DEBUG
   Serial.println(KEY_CODES[currentProfile][button_id]);
 #endif
-  if (currentProfile == ID_OF_CONSUMER_PROFILE)
+  /*if (currentProfile == ID_OF_CONSUMER_PROFILE)
   {
     blehid.consumerKeyPress(KEY_CODES[currentProfile][button_id]);
     blehid.consumerKeyRelease();
@@ -213,7 +219,8 @@ void fireKey(uint32_t button_id)
   {
     blehid.keyPress(KEY_CODES[currentProfile][button_id]);
     blehid.keyRelease();
-  }
+  }*/
+ gp.buttons |= (1 << KEY_CODES_PROFILE_1[button_id]);
 }
 
 
